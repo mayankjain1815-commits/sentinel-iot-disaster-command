@@ -5,9 +5,12 @@ import { SentinelMark } from './components/Logo.jsx';
 import { Sidebar } from './components/Sidebar.jsx';
 import { ToastStack } from './components/ToastStack.jsx';
 import { Topbar } from './components/Topbar.jsx';
+import { Login } from './components/Login.jsx';
+import { ProfileModal } from './components/ProfileModal.jsx';
 import { api } from './lib/api.js';
 import { alertTypeLabel } from './lib/format.js';
 import { useSentinel } from './lib/useSentinel.js';
+import { getToken, getUser } from './lib/auth.js';
 import { AlertsView } from './views/AlertsView.jsx';
 import { CommandView } from './views/CommandView.jsx';
 import { IncidentsView } from './views/IncidentsView.jsx';
@@ -35,6 +38,8 @@ export function App() {
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [toasts, setToasts] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [authenticated, setAuthenticated] = useState(!!getToken());
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const pushToast = useCallback((message, tone = 'neutral', title) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -116,6 +121,21 @@ export function App() {
       setBusy(false);
     }
   }, [pushToast, snapshot?.meta?.operator]);
+
+  const handleLogin = useCallback((user) => {
+    setAuthenticated(true);
+    pushToast(`Welcome, ${user?.username || 'Operator'}`, 'success', 'Authenticated');
+  }, [pushToast]);
+
+  const handleLogout = useCallback(() => {
+    setAuthenticated(false);
+    setProfileOpen(false);
+    pushToast('Signed out successfully', 'neutral', 'Session ended');
+  }, [pushToast]);
+
+  if (!authenticated) {
+    return <Login onLogin={handleLogin} />;
+  }
 
   if (!snapshot) {
     return (
@@ -233,6 +253,7 @@ export function App() {
           connection={connection}
           onMenu={() => setSidebarOpen(true)}
           onOpenAlerts={() => navigate('alerts')}
+          onOpenProfile={() => setProfileOpen(true)}
         />
 
         <main className="app-content" id="main-content">
@@ -277,6 +298,7 @@ export function App() {
       ) : null}
 
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
+      <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} onLogout={handleLogout} />
     </div>
   );
 }

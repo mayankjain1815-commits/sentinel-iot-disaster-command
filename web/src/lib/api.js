@@ -3,6 +3,10 @@ async function request(path, options = {}) {
     'Content-Type': 'application/json',
     ...(options.headers ?? {}),
   };
+  const token = typeof window !== 'undefined' ? localStorage.getItem('sentinel_token') : null;
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
   const response = await fetch(path, { ...options, headers });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -89,4 +93,12 @@ export function incidentExportUrl(params = {}) {
     }
   });
   return `/api/incidents/export.csv?${query.toString()}`;
+}
+
+export async function login(username, password) {
+  const response = await request('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  });
+  return response;
 }

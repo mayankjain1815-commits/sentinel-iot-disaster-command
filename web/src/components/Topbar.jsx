@@ -1,5 +1,6 @@
 import { Bell, Menu, Shield } from 'lucide-react';
 import { formatClock, formatDate } from '../lib/format.js';
+import { getUser } from '../lib/auth.js';
 
 const VIEW_TITLES = {
   overview: {
@@ -36,14 +37,16 @@ function connectionCopy(connection) {
   return { label: 'Connecting', detail: 'Syncing' };
 }
 
-export function Topbar({ view, snapshot, connection, onMenu, onOpenAlerts }) {
+export function Topbar({ view, snapshot, connection, onMenu, onOpenAlerts, onOpenProfile }) {
   const meta = VIEW_TITLES[view] ?? VIEW_TITLES.overview;
   const connectionState = connectionCopy(connection);
   const unacknowledged = snapshot?.summary?.unacknowledgedAlerts ?? 0;
-  const operator = snapshot?.meta?.operator ?? 'Duty Officer';
+  const user = getUser();
+  const operator = user?.username || snapshot?.meta?.operator || 'Duty Officer';
+  const role = user?.role || 'operator';
   const initials = operator
     .replace(/^Duty Officer\s+/i, '')
-    .split(' ')
+    .split(/[\s_-]+/)
     .map((part) => part[0])
     .join('')
     .slice(0, 2)
@@ -85,16 +88,16 @@ export function Topbar({ view, snapshot, connection, onMenu, onOpenAlerts }) {
           {unacknowledged ? <span className="topbar__alert-count">{unacknowledged}</span> : null}
         </button>
 
-        <div className="operator-chip">
+        <button className="operator-chip" onClick={onOpenProfile} aria-label="Open profile" style={{ cursor: 'pointer', background: 'transparent', border: 'none', textAlign: 'left' }}>
           <span className="operator-chip__avatar">{initials || 'DO'}</span>
           <span className="operator-chip__copy">
             <span className="operator-chip__name">{operator}</span>
             <span className="operator-chip__role">
               <Shield size={10} />
-              Duty authority
+              {role === 'admin' ? 'Admin authority' : 'Duty authority'}
             </span>
           </span>
-        </div>
+        </button>
       </div>
     </header>
   );
