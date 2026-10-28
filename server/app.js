@@ -11,6 +11,7 @@ import { createId } from './utils.js';
 import { helmetConfig, corsOptions, apiLimiter } from './middleware/security.js';
 import authRoutes from './routes/auth.js';
 import cors from 'cors';
+import { authenticateToken, requireRole } from './middleware/auth.js';
 
 function csvEscape(value) {
   const text = String(value ?? '');
@@ -196,49 +197,56 @@ export function createApp({
     res.json({ ok: true, acknowledged: count });
   });
 
-  app.post('/api/alerts/:alertId/acknowledge', (req, res) => {
+  app.post('/api/alerts/:alertId/acknowledge', authenticateToken, requireRole(['admin', 'operator']), (req, res) => {
     const { operator } = commandSchemas.acknowledge.parse(req.body ?? {});
-    const alert = commandService.acknowledgeAlert(req.params.alertId, parseOperator(req) || operator);
+    const alert = commandService.acknowledgeAlert(req.params.alertId, parseOperator(req) || req.user?.username || operator);
     broadcast();
     res.json({ ok: true, data: alert });
   });
 
-  app.post('/api/commands/evacuation', (req, res) => {
+  app.post('/api/alerts/acknowledge-all', authenticateToken, requireRole(['admin', 'operator']), (req, res) => {
+    const { operator } = commandSchemas.acknowledge.parse(req.body ?? {});
+    const count = commandService.acknowledgeAll(parseOperator(req) || req.user?.username || operator);
+    broadcast();
+    res.json({ ok: true, data: { acknowledged: count } });
+  });
+
+  app.post('/api/commands/evacuation', authenticateToken, requireRole(['admin', 'operator']), (req, res) => {
     const payload = commandSchemas.evacuation.parse(req.body ?? {});
-    const result = commandService.issueEvacuation({ nodeId: payload.nodeId, reason: payload.reason, operator: parseOperator(req) || payload.operator });
+    const result = commandService.issueEvacuation({ nodeId: payload.nodeId, reason: payload.reason, operator: parseOperator(req) || req.user?.username || payload.operator });
     broadcast();
     res.status(201).json({ ok: true, data: result });
   });
 
-  app.post('/api/commands/all-clear', (req, res) => {
-    const result = commandService.clearEvacuation(parseOperator(req));
+  app.post('/api/commands/all-clear', authenticateToken, requireRole(['admin', 'operator']), (req, res) => {
+    const result = commandService.clearEvacuation(parseOperator(req) || req.user?.username);
     broadcast();
     res.json({ ok: true, data: result });
   });
 
-  app.post('/api/commands/override', (req, res) => {
+  app.post('/api/commands/override', authenticateToken, requireRole(['admin']), (req, res) => {
     const payload = commandSchemas.override.parse(req.body ?? {});
-    const result = commandService.overrideRisk({ ...payload, operator: parseOperator(req) || payload.operator });
+    const result = commandService.overrideRisk({ ...payload, operator: parseOperator(req) || req.user?.username || payload.operator });
     broadcast();
     res.json({ ok: true, data: result });
   });
 
-  app.delete('/api/nodes/:nodeId/override', (req, res) => {
-    const result = commandService.clearOverride(req.params.nodeId, parseOperator(req));
+  app.delete('/api/nodes/:nodeId/override', authenticateToken, requireRole(['admin']), (req, res) => {
+    const result = commandService.clearOverride(req.params.nodeId, parseOperator(req) || req.user?.username);
     broadcast();
     res.json({ ok: true, data: result });
   });
 
-  app.post('/api/commands/test-sos', (req, res) => {
+  app.post('/api/commands/test-sos', authenticateToken, requireRole(['admin', 'operator']), (req, res) => {
     const payload = commandSchemas.sosTest.parse(req.body ?? {});
-    const result = commandService.triggerSos(payload.nodeId, parseOperator(req) || payload.operator);
+    const result = commandService.triggerSos(payload.nodeId, parseOperator(req) || req.user?.username || payload.operator);
     broadcast();
     res.status(201).json({ ok: true, data: result });
   });
 
-  app.post('/api/commands/siren', (req, res) => {
+  app.post('/api/commands/siren', authenticateToken, requireRole(['admin', 'operator']), (req, res) => {
     const payload = commandSchemas.siren.parse(req.body ?? {});
-    const state = commandService.setSiren(payload.enabled, parseOperator(req) || payload.operator);
+    const state = commandService.setSiren(payload.enabled, parseOperator(req) || req.user?.username || payload.operator);
     broadcast();
     res.json({ ok: true, data: state });
   });
