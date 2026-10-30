@@ -2,12 +2,22 @@ import http from 'node:http';
 import config from './config.js';
 import { SentinelStore } from './store.js';
 import { seedDemoData } from './seed.js';
+import { seedSectorData } from './seed-sector.js';
 import { createApp } from './app.js';
 import { RealtimeHub } from './realtime.js';
 import { SimulationEngine } from './simulator.js';
 
 const store = new SentinelStore(config.databasePath);
-const seeded = seedDemoData(store);
+let seeded = seedDemoData(store);
+if (!seeded && store.listNodes().length === 0) {
+  seeded = seedSectorData(store, 'SECTOR-04');
+} else if (store.listNodes().length > 0) {
+  const existingSite = store.getSite ? store.getSite(null) : null;
+  if (!existingSite) {
+    const { SITE } = await import('./site.js');
+    store.setSite(SITE);
+  }
+}
 
 let realtimeHub = null;
 let simulator = null;

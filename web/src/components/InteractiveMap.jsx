@@ -207,6 +207,8 @@ export function InteractiveMap({
   onSelectNode,
   className = '',
   showControls = true,
+  center = SITE_CENTER,
+  bounds,
 }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
@@ -221,7 +223,7 @@ export function InteractiveMap({
     if (!containerRef.current || mapRef.current) return undefined;
 
     const map = L.map(containerRef.current, {
-      center: SITE_CENTER,
+      center: center || SITE_CENTER,
       zoom: 13,
       zoomControl: false,
       attributionControl: false,
@@ -233,13 +235,11 @@ export function InteractiveMap({
     });
     mapRef.current = map;
 
-    map.fitBounds(
-      [
-        [19.974, 73.754],
-        [20.068, 73.869],
-      ],
-      { padding: [20, 20] },
-    );
+    const fitBounds = bounds || [
+      [19.974, 73.754],
+      [20.068, 73.869],
+    ];
+    map.fitBounds(fitBounds, { padding: [20, 20] });
 
     if (showControls) {
       L.control.zoom({ position: 'bottomright' }).addTo(map);

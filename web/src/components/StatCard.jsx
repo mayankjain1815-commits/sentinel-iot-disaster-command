@@ -7,9 +7,23 @@ export function StatCard({
   tone = 'default',
   children,
   className = '',
+  onClick,
+  clickable,
 }) {
+  const isClickable = clickable || typeof onClick === 'function';
   return (
-    <article className={`stat-card stat-card--${tone} ${className}`}>
+    <article
+      className={`stat-card stat-card--${tone} ${className} ${isClickable ? 'stat-card--clickable' : ''}`}
+      onClick={onClick}
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      onKeyDown={(e) => {
+        if (isClickable && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
+    >
       <div className="stat-card__top">
         <span className="micro-label">{label}</span>
         {Icon ? (

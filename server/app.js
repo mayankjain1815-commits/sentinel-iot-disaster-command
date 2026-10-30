@@ -3,6 +3,7 @@ import express from 'express';
 import compression from 'compression';
 import { ZodError } from 'zod';
 import config from './config.js';
+import { SITE } from './site.js';
 import { DashboardService } from './dashboard-service.js';
 import { CommandService } from './command-service.js';
 import { TelemetryService } from './telemetry-service.js';
@@ -10,6 +11,7 @@ import { commandSchemas, gatewayBatchSchema, telemetrySchema } from './validatio
 import { createId } from './utils.js';
 import { helmetConfig, corsOptions, apiLimiter } from './middleware/security.js';
 import authRoutes from './routes/auth.js';
+import alertsExtendedRoutes from './routes/alerts-extended.js';
 import cors from 'cors';
 import { authenticateToken, requireRole } from './middleware/auth.js';
 
@@ -76,6 +78,7 @@ export function createApp({
   });
 
   app.use('/api/auth', authRoutes);
+  app.use('/api', alertsExtendedRoutes);
 
   app.get('/api/health', (req, res) => {
     const snapshot = dashboardService.getSnapshot();
@@ -249,6 +252,27 @@ export function createApp({
     const state = commandService.setSiren(payload.enabled, parseOperator(req) || req.user?.username || payload.operator);
     broadcast();
     res.json({ ok: true, data: state });
+  });
+
+  app.post('/api/site/switch', authenticateToken, requireRole(['admin']), async (req, res) => {
+    const { code } = req.body || {};
+    if (!code) {
+      return res.status(400).json({ ok: false, error: 'Sector code required' });
+    }
+    try {
+      const { getSector } = await import('./sectors.js');
+      const site = getSector(code);
+      store.setSite(site);
+      broadcast();
+      res.json({ ok: true, data: site });
+    } catch (err) {
+      res.status(400).json({ ok: false, error: err.message });
+    }
+  });
+
+  app.get('/api/site', (req, res) => {
+    const stored = store.getSite ? store.getSite(null) : null;
+    res.json({ ok: true, data: stored || SITE });
   });
 
   app.use('/api', (req, res) => {

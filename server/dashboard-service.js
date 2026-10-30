@@ -1,5 +1,6 @@
 import config from './config.js';
 import { SITE } from './site.js';
+import { getSector } from './sectors.js';
 import { RISK_LEVELS, batteryPercent, round } from './utils.js';
 import { riskLevelToScore } from './risk-engine.js';
 
@@ -109,6 +110,8 @@ export class DashboardService {
 
   getSnapshot() {
     const now = Date.now();
+    const storedSite = this.store.getSite ? this.store.getSite(null) : null;
+    const site = storedSite || SITE;
     const nodes = this.store.listNodes().map((node) => {
       const recent = this.store.getRecentTelemetry(node.id, 30).reverse();
       return {
@@ -134,7 +137,7 @@ export class DashboardService {
     return {
       meta: {
         application: 'SENTINEL',
-        site: SITE,
+        site,
         regionName: config.regionName,
         organization: 'District Disaster Management Authority',
         operator: config.operatorName,

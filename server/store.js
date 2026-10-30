@@ -729,4 +729,12 @@ export class SentinelStore {
       .prepare("DELETE FROM alerts WHERE created_at < ? AND status = 'resolved'")
       .run(cutoff);
   }
+
+  setSite(site) {
+    this.setState('site', site);
+  }
+
+  getSite(fallback) {
+    return this.getState('site', fallback);
+  }
 }

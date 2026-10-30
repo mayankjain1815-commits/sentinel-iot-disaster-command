@@ -49,11 +49,20 @@ export function Sidebar({ view, onNavigate, snapshot, open, onClose }) {
     <>
       <aside className={`sidebar ${open ? 'sidebar--open' : ''}`} aria-label="Primary navigation">
         <div className="sidebar__brand">
-          <SentinelMark size={44} />
-          <div className="sidebar__brand-copy">
-            <span className="sidebar__wordmark">SENTINEL</span>
-            <span className="sidebar__tagline">Disaster command</span>
-          </div>
+          <button
+            onClick={() => {
+              onNavigate('overview');
+              onClose?.();
+            }}
+            aria-label="Go to overview"
+            style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.9rem' }}
+          >
+            <SentinelMark size={44} />
+            <div className="sidebar__brand-copy">
+              <span className="sidebar__wordmark">SENTINEL</span>
+              <span className="sidebar__tagline">Disaster command</span>
+            </div>
+          </button>
           <button className="sidebar__close icon-button" onClick={onClose} aria-label="Close navigation">
             <X size={18} />
           </button>
@@ -67,6 +76,97 @@ export function Sidebar({ view, onNavigate, snapshot, open, onClose }) {
           </div>
           <strong>{snapshot?.meta?.site?.name ?? 'Nashik Basin'}</strong>
           <span className="sidebar__sector-detail">{snapshot?.meta?.site?.district ?? 'Maharashtra'}</span>
+          <div className="sidebar__sectors" style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            <span className="micro-label">Other sectors</span>
+            <button
+              className="nav-item"
+              style={{ padding: '0.5rem 0.6rem' }}
+              onClick={async () => {
+                try {
+                  const token = localStorage.getItem('sentinel_token');
+                  await fetch('/api/site/switch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                    body: JSON.stringify({ code: 'SECTOR-01' }),
+                  });
+                  window.location.reload();
+                } catch (e) {
+                  console.error(e);
+                }
+              }}
+            >
+              <span className="nav-item__copy">
+                <span className="nav-item__label">SECTOR-01 · Godavari Basin</span>
+                <span className="nav-item__hint">Maharashtra</span>
+              </span>
+            </button>
+            <button
+              className="nav-item"
+              style={{ padding: '0.5rem 0.6rem' }}
+              onClick={async () => {
+                try {
+                  const token = localStorage.getItem('sentinel_token');
+                  await fetch('/api/site/switch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                    body: JSON.stringify({ code: 'SECTOR-02' }),
+                  });
+                  window.location.reload();
+                } catch (e) {
+                  console.error(e);
+                }
+              }}
+            >
+              <span className="nav-item__copy">
+                <span className="nav-item__label">SECTOR-02 · Tapi Basin</span>
+                <span className="nav-item__hint">Gujarat</span>
+              </span>
+            </button>
+            <button
+              className="nav-item"
+              style={{ padding: '0.5rem 0.6rem' }}
+              onClick={async () => {
+                try {
+                  const token = localStorage.getItem('sentinel_token');
+                  await fetch('/api/site/switch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                    body: JSON.stringify({ code: 'SECTOR-03' }),
+                  });
+                  window.location.reload();
+                } catch (e) {
+                  console.error(e);
+                }
+              }}
+            >
+              <span className="nav-item__copy">
+                <span className="nav-item__label">SECTOR-03 · Krishna Basin</span>
+                <span className="nav-item__hint">Karnataka</span>
+              </span>
+            </button>
+            <button
+              className="nav-item"
+              style={{ padding: '0.5rem 0.6rem' }}
+              onClick={async () => {
+                try {
+                  const token = localStorage.getItem('sentinel_token');
+                  await fetch('/api/site/switch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                    body: JSON.stringify({ code: 'SECTOR-04' }),
+                  });
+                  window.location.reload();
+                } catch (e) {
+                  console.error(e);
+                }
+              }}
+            >
+              <span className="nav-item__copy">
+                <span className="nav-item__label">SECTOR-04 · Nashik Basin</span>
+                <span className="nav-item__hint">Maharashtra</span>
+              </span>
+            </button>
+          </div>
         </div>
 
         <nav className="sidebar__nav">
@@ -140,10 +240,17 @@ export function Sidebar({ view, onNavigate, snapshot, open, onClose }) {
         </div>
 
         <div className="sidebar__footer">
-          <div className="sidebar__footer-line">
+          <button
+            className="sidebar__footer-line"
+            style={{ background: 'transparent', border: 'none', color: 'inherit', width: '100%', textAlign: 'left', cursor: 'pointer', padding: 0 }}
+            onClick={() => {
+              alert('Authentication: District Disaster Management Authority (DDMA)\nRole: Authority access enabled\nSession: Authenticated via JWT\nAccess: Command console, overrides, evacuations permitted');
+            }}
+            title="View authentication details"
+          >
             <ShieldCheck size={14} />
             <span>DDMA authenticated</span>
-          </div>
+          </button>
           <div className="sidebar__footer-line sidebar__footer-line--muted">
             <Wifi size={13} />
             <span>v1.0 · Node 22+</span>
