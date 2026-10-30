@@ -12,6 +12,8 @@ import { createId } from './utils.js';
 import { helmetConfig, corsOptions, apiLimiter } from './middleware/security.js';
 import authRoutes from './routes/auth.js';
 import alertsExtendedRoutes from './routes/alerts-extended.js';
+import evacuationRoutes from './routes/evacuation.js';
+import multiAuthRoutes from './routes/multi-auth.js';
 import cors from 'cors';
 import { authenticateToken, requireRole } from './middleware/auth.js';
 
@@ -78,6 +80,8 @@ export function createApp({
   });
 
   app.use('/api/auth', authRoutes);
+  app.use('/api/multi-auth', multiAuthRoutes);
+  app.use('/api/evacuation', evacuationRoutes);
   app.use('/api', alertsExtendedRoutes);
 
   app.get('/api/health', (req, res) => {
