@@ -264,11 +264,11 @@ export function createApp({
       return res.status(400).json({ ok: false, error: 'Sector code required' });
     }
     try {
-      const { getSector } = await import('./sectors.js');
-      const site = getSector(code);
-      store.setSite(site);
+      const { SectorManager } = await import('./sector-manager.js');
+      const manager = new SectorManager(store);
+      const result = manager.switchSector(code);
       broadcast();
-      res.json({ ok: true, data: site });
+      res.json({ ok: true, data: result.sector, nodes: result.nodes.length });
     } catch (err) {
       res.status(400).json({ ok: false, error: err.message });
     }
