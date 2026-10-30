@@ -94,6 +94,8 @@ export function Overview({
           detail={`${summary.criticalAlerts} severe · ${summary.unacknowledgedAlerts} awaiting acknowledgment`}
           icon={BellRing}
           tone={summary.criticalAlerts ? 'severe' : summary.activeAlerts ? 'high' : 'default'}
+          onClick={() => onNavigate?.('alerts')}
+          clickable
         >
           <div className="alert-mini-bars" aria-hidden="true">
             {Array.from({ length: 12 }).map((_, index) => (

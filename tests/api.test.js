@@ -16,6 +16,14 @@ function makeApp(options = {}) {
   return { app, store };
 }
 
+async function authHeader(app) {
+  const res = await request(app).post('/api/auth/login').send({ username: 'admin', password: 'admin' });
+  if (res.body?.token) {
+    return { Authorization: `Bearer ${res.body.token}` };
+  }
+  return {};
+}
+
 function documentedReading(overrides = {}) {
   return {
     nodeId: 'SN-NASH-01',
@@ -186,6 +194,7 @@ test('alert acknowledgment records ownership and rejects repeat claims', async (
 
   const acknowledged = await request(app)
     .post('/api/alerts/ALT-SEED-FLOOD/acknowledge')
+    .set({ Authorization: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc5MzE5Mjg4MCwiZXhwIjoxNzkzMTk2NDgwLCJpc3MiOiJzZW50aW5lbC1pb3QifQ.gU3NITmt0qvxbp0k8sP6cYN8o9oXG5Xr6vJ0c0Xx0Xk' })
     .set('x-operator-name', 'Officer K. Patil')
     .send({})
     .expect(200);
@@ -196,9 +205,10 @@ test('alert acknowledgment records ownership and rejects repeat claims', async (
 
   await request(app)
     .post('/api/alerts/ALT-SEED-FLOOD/acknowledge')
+    .set({ Authorization: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc5MzE5Mjg4MCwiZXhwIjoxNzkzMTk2NDgwLCJpc3MiOiJzZW50aW5lbC1pb3QifQ.gU3NITmt0qvxbp0k8sP6cYN8o9oXG5Xr6vJ0c0Xx0Xk' })
     .send({ operator: 'Officer K. Patil' })
     .expect(409);
-  await request(app).post('/api/alerts/ALT-MISSING/acknowledge').send({}).expect(404);
+  await request(app).post('/api/alerts/ALT-MISSING/acknowledge').set({ Authorization: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc5MzE5Mjg4MCwiZXhwIjoxNzkzMTk2NDgwLCJpc3MiOiJzZW50aW5lbC1pb3QifQ.gU3NITmt0qvxbp0k8sP6cYN8o9oXG5Xr6vJ0c0Xx0Xk' }).send({}).expect(404);
 
   const incident = store
     .listIncidents({ search: 'acknowledged', limit: 20 })
@@ -217,7 +227,7 @@ test('bulk acknowledgment clears only unacknowledged alerts', async () => {
   assert.equal(store.listAlerts().filter((alert) => alert.status === 'active').length, 0);
   assert.ok(store.listAlerts().every((alert) => alert.status === 'acknowledged'));
 
-  const again = await request(app).post('/api/alerts/acknowledge-all').send({}).expect(200);
+  const again = await request(app).post('/api/alerts/acknowledge-all').set({ Authorization: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc5MzE5Mjg4MCwiZXhwIjoxNzkzMTk2NDgwLCJpc3MiOiJzZW50aW5lbC1pb3QifQ.gU3NITmt0qvxbp0k8sP6cYN8o9oXG5Xr6vJ0c0Xx0Xk' }).send({}).expect(200);
   assert.equal(again.body.acknowledged, 0);
 });
 
@@ -311,11 +321,13 @@ test('evacuation can target one node and rejects unknown targets', async () => {
 
   await request(first.app)
     .post('/api/commands/evacuation')
+    .set({ Authorization: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc5MzE5Mjg4MCwiZXhwIjoxNzkzMTk2NDgwLCJpc3MiOiJzZW50aW5lbC1pb3QifQ.gU3NITmt0qvxbp0k8sP6cYN8o9oXG5Xr6vJ0c0Xx0Xk' })
     .send({ nodeId: 'SN-MISSING', reason: 'Unknown node evacuation.' })
     .expect(404);
 
   const issued = await request(first.app)
     .post('/api/commands/evacuation')
+    .set({ Authorization: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc5MzE5Mjg4MCwiZXhwIjoxNzkzMTk2NDgwLCJpc3MiOiJzZW50aW5lbC1pb3QifQ.gU3NITmt0qvxbp0k8sP6cYN8o9oXG5Xr6vJ0c0Xx0Xk' })
     .send({ nodeId: 'SN-NASH-01', reason: 'Localized riverside evacuation required.' })
     .expect(201);
   assert.equal(issued.body.data.state.scope, 'SN-NASH-01');
@@ -327,6 +339,7 @@ test('SOS exercise creates a severe alert and cannot duplicate an active SOS', a
 
   const sos = await request(app)
     .post('/api/commands/test-sos')
+    .set({ Authorization: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc5MzE5Mjg4MCwiZXhwIjoxNzkzMTk2NDgwLCJpc3MiOiJzZW50aW5lbC1pb3QifQ.gU3NITmt0qvxbp0k8sP6cYN8o9oXG5Xr6vJ0c0Xx0Xk' })
     .set('x-operator-name', 'Officer K. Patil')
     .send({ nodeId: 'SN-NASH-02' })
     .expect(201);
@@ -338,19 +351,24 @@ test('SOS exercise creates a severe alert and cannot duplicate an active SOS', a
 
   await request(app)
     .post('/api/commands/test-sos')
+    .set({ Authorization: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc5MzE5Mjg4MCwiZXhwIjoxNzkzMTk2NDgwLCJpc3MiOiJzZW50aW5lbC1pb3QifQ.gU3NITmt0qvxbp0k8sP6cYN8o9oXG5Xr6vJ0c0Xx0Xk' })
     .send({ nodeId: 'SN-NASH-02' })
     .expect(409);
   await request(app)
     .post('/api/commands/test-sos')
+    .set({ Authorization: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc5MzE5Mjg4MCwiZXhwIjoxNzkzMTk2NDgwLCJpc3MiOiJzZW50aW5lbC1pb3QifQ.gU3NITmt0qvxbp0k8sP6cYN8o9oXG5Xr6vJ0c0Xx0Xk' })
     .send({ nodeId: 'SN-MISSING' })
     .expect(404);
 });
 
 test('siren control is persisted and audited', async () => {
   const { app, store } = makeApp({ seed: true });
+  const login = await request(app).post('/api/auth/login').send({ username: 'admin', password: 'admin' });
+  const auth = login.body?.token ? { Authorization: `Bearer ${login.body.token}` } : {};
 
   const enabled = await request(app)
     .post('/api/commands/siren')
+    .set(auth)
     .set('x-operator-name', 'Officer K. Patil')
     .send({ enabled: true })
     .expect(200);
@@ -359,12 +377,13 @@ test('siren control is persisted and audited', async () => {
 
   const silenced = await request(app)
     .post('/api/commands/siren')
+    .set(auth)
     .send({ enabled: false })
     .expect(200);
   assert.equal(silenced.body.data.enabled, false);
   assert.equal(store.getState('siren').enabled, false);
 
-  await request(app).post('/api/commands/siren').send({ enabled: 'yes' }).expect(400);
+  await request(app).post('/api/commands/siren').set(auth).send({ enabled: 'yes' }).expect(400);
 });
 
 test('alerts can be filtered and resolved records are hidden by default', async () => {

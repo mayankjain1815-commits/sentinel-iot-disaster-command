@@ -6970,3 +6970,19 @@ img {
   letter-spacing: 0.24em;
   font-size: 0.75rem;
 }
+
+.stat-card--clickable {
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.stat-card--clickable:hover {
+  transform: translateY(-2px);
+  border-color: rgba(234, 170, 0, 0.6);
+  box-shadow: 0 40px 80px -60px rgba(234, 170, 0, 0.5);
+}
+
+.stat-card--clickable:focus-visible {
+  outline: 2px solid rgba(234, 170, 0, 0.8);
+  outline-offset: 2px;
+}

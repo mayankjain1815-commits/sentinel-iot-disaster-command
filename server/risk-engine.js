@@ -55,18 +55,22 @@ function scoreFlood(reading, context) {
   const waterDelta = reading.waterLevel - (context.previousWaterLevel ?? reading.waterLevel);
   const trendPoints = ramp(waterDelta, 1, 24) * 0.07;
 
-  factors.push(contribution('Water depth', reading.waterLevel, waterPoints, `${round(reading.waterLevel)} cm`));
-  factors.push(contribution('Rainfall intensity', reading.rain, rainPoints, `${round(reading.rain)} mm/h`));
+  const terrainMultiplier = TERRAIN_FACTORS[context.terrain]?.flood ?? 1;
+
+  factors.push(contribution('Water depth', reading.waterLevel, waterPoints * terrainMultiplier, `${round(reading.waterLevel)} cm`));
+  factors.push(contribution('Rainfall intensity', reading.rain, rainPoints * terrainMultiplier, `${round(reading.rain)} mm/h`));
   if (humidityPoints >= 0.4) {
-    factors.push(contribution('Saturated air', reading.humidity, humidityPoints, `${round(reading.humidity)}%`));
+    factors.push(contribution('Saturated air', reading.humidity, humidityPoints * terrainMultiplier, `${round(reading.humidity)}%`));
   }
   if (trendPoints >= 0.4) {
-    factors.push(contribution('Rising water', waterDelta, trendPoints, `+${round(waterDelta)} cm`));
+    factors.push(contribution('Rising water', waterDelta, trendPoints * terrainMultiplier, `+${round(waterDelta)} cm`));
   }
 
-  const terrainMultiplier = TERRAIN_FACTORS[context.terrain]?.flood ?? 1;
-  const rawScore = factors.reduce((total, factor) => total + factor.points, 0);
-  const score = clamp(rawScore * terrainMultiplier, 0, 100);
+  const score = clamp(
+    factors.reduce((total, factor) => total + factor.points, 0),
+    0,
+    100,
+  );
 
   return {
     key: 'flood',
@@ -88,20 +92,21 @@ function scoreLandslide(reading, context) {
   const humidityPoints = ramp(reading.humidity, 80, 100) * 0.1;
   const slopePoints = clamp(context.slopeRisk, 0, 100) * 0.2;
 
-  factors.push(contribution('Rain infiltration', reading.rain, rainPoints, `${round(reading.rain)} mm/h`));
+  const terrainMultiplier = TERRAIN_FACTORS[context.terrain]?.landslide ?? 1;
+
+  factors.push(contribution('Rain infiltration', reading.rain, rainPoints * terrainMultiplier, `${round(reading.rain)} mm/h`));
   if (vibrationPoints >= 0.4) {
     factors.push(
-      contribution('Ground vibration', reading.vibrationLevel, vibrationPoints, `${round(reading.vibrationLevel)}%`),
+      contribution('Ground vibration', reading.vibrationLevel, vibrationPoints * terrainMultiplier, `${round(reading.vibrationLevel)}%`),
     );
   }
   if (humidityPoints >= 0.4) {
-    factors.push(contribution('Soil saturation', reading.humidity, humidityPoints, `${round(reading.humidity)}%`));
+    factors.push(contribution('Soil saturation', reading.humidity, humidityPoints * terrainMultiplier, `${round(reading.humidity)}%`));
   }
-  factors.push(contribution('Slope exposure', context.slopeRisk, slopePoints, `${round(context.slopeRisk)} / 100`));
+  factors.push(contribution('Slope exposure', context.slopeRisk, slopePoints * terrainMultiplier, `${round(context.slopeRisk)} / 100`));
 
-  const terrainMultiplier = TERRAIN_FACTORS[context.terrain]?.landslide ?? 1;
   const score = clamp(
-    factors.reduce((total, factor) => total + factor.points, 0) * terrainMultiplier,
+    factors.reduce((total, factor) => total + factor.points, 0),
     0,
     100,
   );

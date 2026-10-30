@@ -49,7 +49,7 @@ export function MapView({
       <div className="view-lead">
         <div>
           <span className="eyebrow">GY-NEO6MV2 GPS fixes</span>
-          <h2>Nashik Basin impact envelope</h2>
+          <h2>{snapshot?.meta?.site?.name ?? 'Nashik Basin'} impact envelope</h2>
           <p>
             Risk radii are projected from live sensor coordinates and the composite hazard index. Click a
             node to inspect diagnostics.
@@ -93,6 +93,8 @@ export function MapView({
             selectedNodeId={selectedNodeId}
             onSelectNode={setSelectedNodeId}
             className="map-view__map"
+            center={snapshot?.meta?.site?.center}
+            bounds={snapshot?.meta?.site?.bounds}
           />
           <footer className="map-view__map-footer">
             <span>

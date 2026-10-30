@@ -207,6 +207,8 @@ export function InteractiveMap({
   onSelectNode,
   className = '',
   showControls = true,
+  center = SITE_CENTER,
+  bounds,
 }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
@@ -218,53 +220,71 @@ export function InteractiveMap({
   selectRef.current = onSelectNode;
 
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return undefined;
+    if (!containerRef.current) return undefined;
+    if (mapRef.current) return undefined;
 
-    const map = L.map(containerRef.current, {
-      center: SITE_CENTER,
-      zoom: 13,
-      zoomControl: false,
-      attributionControl: false,
-      minZoom: 11,
-      maxZoom: 17,
-      zoomSnap: 0.25,
-      preferCanvas: true,
-      worldCopyJump: false,
-    });
-    mapRef.current = map;
+    try {
+      const map = L.map(containerRef.current, {
+        center: Array.isArray(center) ? center : SITE_CENTER,
+        zoom: 13,
+        zoomControl: false,
+        attributionControl: false,
+        minZoom: 10,
+        maxZoom: 17,
+        zoomSnap: 0.25,
+        preferCanvas: true,
+        worldCopyJump: false,
+      });
+      mapRef.current = map;
 
-    map.fitBounds(
-      [
+      const fitBounds = Array.isArray(bounds) && bounds.length === 2 ? bounds : [
         [19.974, 73.754],
         [20.068, 73.869],
-      ],
-      { padding: [20, 20] },
-    );
+      ];
+      try {
+        map.fitBounds(fitBounds, { padding: [20, 20] });
+      } catch (e) {
+        map.setView(Array.isArray(center) ? center : SITE_CENTER, 13);
+      }
 
-    if (showControls) {
-      L.control.zoom({ position: 'bottomright' }).addTo(map);
-      L.control.scale({ position: 'bottomleft', imperial: false, maxWidth: 110 }).addTo(map);
+      if (showControls) {
+        try {
+          L.control.zoom({ position: 'bottomright' }).addTo(map);
+          L.control.scale({ position: 'bottomleft', imperial: false, maxWidth: 110 }).addTo(map);
+        } catch (e) {}
+      }
+
+      try {
+        L.featureGroup(baseMapLayers()).addTo(map);
+      } catch (e) {}
+
+      map.on('mousemove', (event) => {
+        setPointer({ lat: event.latlng.lat, lon: event.latlng.lng });
+      });
+      map.on('mouseout', () => setPointer(null));
+
+      const observer = new ResizeObserver(() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize({ pan: false });
+        }
+      });
+      observer.observe(containerRef.current);
+      setTimeout(() => {
+        if (mapRef.current) mapRef.current.invalidateSize({ pan: false });
+      }, 100);
+
+      return () => {
+        observer.disconnect();
+        if (mapRef.current) {
+          mapRef.current.remove();
+          mapRef.current = null;
+        }
+        nodeLayerRef.current.clear();
+      };
+    } catch (e) {
+      console.error('Map init error:', e);
+      return undefined;
     }
-
-    // FeatureGroup keeps the generated basemap layers together underneath the
-    // live node layers that are attached to the map later.
-    L.featureGroup(baseMapLayers()).addTo(map);
-
-    map.on('mousemove', (event) => {
-      setPointer({ lat: event.latlng.lat, lon: event.latlng.lng });
-    });
-    map.on('mouseout', () => setPointer(null));
-
-    const observer = new ResizeObserver(() => map.invalidateSize({ pan: false }));
-    observer.observe(containerRef.current);
-    window.setTimeout(() => map.invalidateSize({ pan: false }), 80);
-
-    return () => {
-      observer.disconnect();
-      map.remove();
-      mapRef.current = null;
-      nodeLayerRef.current.clear();
-    };
   }, [showControls]);
 
   useEffect(() => {
@@ -274,24 +294,23 @@ export function InteractiveMap({
 
     for (const [nodeId, layer] of nodeLayerRef.current.entries()) {
       if (!currentIds.has(nodeId)) {
-        layer.marker.remove();
-        layer.circle.remove();
+        try { layer.marker.remove(); layer.circle.remove(); } catch {}
         nodeLayerRef.current.delete(nodeId);
       }
     }
 
     nodes.forEach((node, index) => {
       const selected = node.id === selectedNodeId;
-      const riskStyle = RISK_STYLES[node.risk.level] ?? RISK_STYLES.low;
-      const radius = (RISK_RADIUS_METERS[node.risk.level] ?? 800) * (selected ? 1.08 : 1);
+      const riskStyle = RISK_STYLES[node.risk?.level] ?? RISK_STYLES.low;
+      const radius = (RISK_RADIUS_METERS[node.risk?.level] ?? 800) * (selected ? 1.08 : 1);
       const markerHtml = `
-        <div class="map-node map-node--${node.risk.level} ${selected ? 'map-node--selected' : ''}">
+        <div class="map-node map-node--${node.risk?.level || 'low'} ${selected ? 'map-node--selected' : ''}">
           <span class="map-node__pulse"></span>
           <span class="map-node__ring"></span>
           <span class="map-node__core">${String(index + 1).padStart(2, '0')}</span>
           <span class="map-node__label">
             <strong>${escapeHtml(node.name)}</strong>
-            <span>${Math.round(node.risk.score)} · ${riskLabel(node.risk.level)}</span>
+            <span>${Math.round(node.risk?.score || 0)} · ${riskLabel(node.risk?.level || 'low')}</span>
           </span>
         </div>`;
       const icon = L.divIcon({
@@ -301,54 +320,50 @@ export function InteractiveMap({
         iconAnchor: [84, 36],
       });
 
-      const existing = nodeLayerRef.current.get(node.id);
-      if (existing) {
-        existing.marker.setLatLng([node.lat, node.lon]);
-        existing.marker.setIcon(icon);
-        existing.marker.setZIndexOffset(selected ? 800 : 300 + index);
-        existing.marker.setPopupContent(popupHtml(node));
-        existing.circle.setLatLng([node.lat, node.lon]);
-        existing.circle.setRadius(radius);
-        existing.circle.setStyle({
+      let entry = nodeLayerRef.current.get(node.id);
+      if (!entry) {
+        const marker = L.marker([node.lat, node.lon], { icon, riseOnHover: true }).addTo(map);
+        const circle = L.circle([node.lat, node.lon], {
+          radius,
           color: riskStyle.color,
-          fillColor: riskStyle.fill,
           weight: riskStyle.weight,
-          dashArray: node.risk.level === 'severe' ? '6 7' : null,
+          fillColor: riskStyle.fill,
+          fillOpacity: 0.8,
+          opacity: 0.9,
+        }).addTo(map);
+
+        marker.on('click', () => {
+          selectRef.current?.(node.id);
         });
-        return;
+        marker.bindPopup(popupHtml(node), {
+          className: 'map-popup-pane',
+          maxWidth: 320,
+          closeButton: false,
+        });
+
+        entry = { marker, circle };
+        nodeLayerRef.current.set(node.id, entry);
+      } else {
+        entry.marker.setLatLng([node.lat, node.lon]);
+        entry.marker.setIcon(icon);
+        entry.circle.setLatLng([node.lat, node.lon]);
+        entry.circle.setRadius(radius);
+        entry.circle.setStyle(riskStyle);
+        entry.marker.bindPopup(popupHtml(node), {
+          className: 'map-popup-pane',
+          maxWidth: 320,
+          closeButton: false,
+        });
       }
 
-      const circle = L.circle([node.lat, node.lon], {
-        radius,
-        color: riskStyle.color,
-        fillColor: riskStyle.fill,
-        fillOpacity: 0.75,
-        weight: riskStyle.weight,
-        dashArray: node.risk.level === 'severe' ? '6 7' : null,
-        interactive: false,
-      }).addTo(map);
-
-      const marker = L.marker([node.lat, node.lon], {
-        icon,
-        zIndexOffset: selected ? 800 : 300 + index,
-        riseOnHover: true,
-        title: node.name,
-      }).addTo(map);
-
-      marker.bindPopup(popupHtml(node), {
-        className: 'sentinel-popup',
-        maxWidth: 308,
-        minWidth: 280,
-        closeButton: true,
-        offset: [0, 4],
-        autoPanPadding: [28, 28],
-      });
-
-      marker.on('click', () => {
-        selectRef.current?.(node.id);
-      });
-
-      nodeLayerRef.current.set(node.id, { marker, circle });
+      if (selected) {
+        entry.circle.setStyle({ ...riskStyle, weight: riskStyle.weight + 0.6 });
+        if (!entry.marker.isPopupOpen()) {
+          entry.marker.openPopup();
+        }
+      } else {
+        entry.circle.setStyle(riskStyle);
+      }
     });
   }, [nodes, selectedNodeId]);
 
@@ -357,43 +372,29 @@ export function InteractiveMap({
     const node = nodes.find((item) => item.id === selectedNodeId);
     if (!node) return;
     hasFocusedRef.current = true;
-    mapRef.current.panTo([node.lat, node.lon], { animate: true, duration: 0.5 });
-  }, [selectedNodeId, nodes]);
+    try {
+      mapRef.current.panTo([node.lat, node.lon], { animate: true, duration: 0.5 });
+    } catch {}
+  }, [nodes, selectedNodeId]);
+
+  useEffect(() => {
+    hasFocusedRef.current = false;
+  }, [selectedNodeId]);
 
   return (
-    <div className={`map-shell ${className}`}>
-      <div className="map-canvas" ref={containerRef} aria-label="Interactive risk map" role="application" />
-      <div className="map-overlay map-overlay--top-left">
-        <span className="map-live">
-          <span className="map-live__dot" />
-          GPS POSITIONS · LIVE
+    <div className={`interactive-map ${className}`}>
+      <div ref={containerRef} className="interactive-map__canvas" role="presentation" />
+      <div className="interactive-map__hud">
+        <span className="map-hud-chip">
+          <span className="status-dot status-dot--pulse" /> Live GPS
         </span>
-        <span className="map-overlay__detail">
-          {nodes.length} nodes · {nodes.filter((node) => node.online).length} reporting
-        </span>
-      </div>
-      <div className="map-overlay map-overlay--top-right">
-        <div className="map-legend">
-          <span className="map-legend__title">Risk envelope</span>
-          {['low', 'moderate', 'high', 'severe'].map((level) => (
-            <span className={`map-legend__item map-legend__item--${level}`} key={level}>
-              <span className="map-legend__swatch" />
-              {riskLabel(level)}
-            </span>
-          ))}
-        </div>
-      </div>
-      <div className="map-compass" aria-hidden="true">
-        <span>N</span>
-        <i />
-      </div>
-      <div className="map-overlay map-overlay--bottom">
-        <span className="map-coords">
-          {pointer
-            ? `${formatCoordinate(pointer.lat, 'lat')} · ${formatCoordinate(pointer.lon, 'lon')}`
-            : 'GY-NEO6MV2 · 1 Hz GPS fix'}
-        </span>
-        <span className="map-source">DDMA offline vector basemap</span>
+        {pointer ? (
+          <span className="map-hud-chip map-hud-chip--coords">
+            {formatCoordinate(pointer.lat, 'lat')} · {formatCoordinate(pointer.lon, 'lon')}
+          </span>
+        ) : (
+          <span className="map-hud-chip">Node markers scale with composite risk</span>
+        )}
       </div>
     </div>
   );
