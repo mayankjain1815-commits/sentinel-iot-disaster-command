@@ -12,6 +12,7 @@ import { InteractiveMap } from '../components/InteractiveMap.jsx';
 import { RegionalRiskPanel } from '../components/RegionalRiskPanel.jsx';
 import { AlertFeed } from '../components/AlertFeed.jsx';
 import { RecentIncidents } from '../components/RecentIncidents.jsx';
+import { EvacuationPanel } from '../components/EvacuationPanel.jsx';
 import { formatNumber, formatRelative } from '../lib/format.js';
 
 export function Overview({
@@ -160,6 +161,7 @@ export function Overview({
         </div>
 
         <aside className="overview-rail">
+          <EvacuationPanel />
           <RegionalRiskPanel snapshot={snapshot} />
           <AlertFeed
             alerts={snapshot.alerts}
