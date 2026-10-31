@@ -94,3 +94,43 @@ router.post('/request-evacuation', (req, res) => {
     }
   });
 });
+
+router.get('/offline-kit', (req, res) => {
+  const allShelters = [
+    { id: 'SH-001', name: 'Nashik Civil Hospital Relief Camp', lat: 20.0110, lon: 73.7903, capacity: 500, type: 'hospital', contact: '+91-253-257-8901' },
+    { id: 'SH-002', name: 'Panchavati School Evacuation Center', lat: 20.0067, lon: 73.7910, capacity: 300, type: 'school', contact: '+91-253-259-1234' },
+    { id: 'SH-003', name: 'Dindori Road Community Hall', lat: 20.0205, lon: 73.8102, capacity: 250, type: 'community', contact: '+91-253-262-5678' },
+    { id: 'SH-004', name: 'Godavari Ghat Relief Camp', lat: 19.9950, lon: 73.7800, capacity: 400, type: 'camp', contact: '+91-253-258-9012' },
+    { id: 'SH-005', name: 'Satpur Industrial Area Shelter', lat: 20.0025, lon: 73.7550, capacity: 350, type: 'warehouse', contact: '+91-253-261-3456' }
+  ];
+
+  res.json({
+    ok: true,
+    data: {
+      shelters: allShelters,
+      zones: [
+        { id: 'EZ-1', name: 'Godavari Lowlands', risk: 'severe', evacuationRequired: true },
+        { id: 'EZ-2', name: 'Panchavati Ridge', risk: 'high', evacuationRequired: true },
+        { id: 'EZ-3', name: 'Darna Spillway', risk: 'moderate', evacuationRequired: false }
+      ],
+      emergencyContacts: {
+        police: '100',
+        fire: '101',
+        ambulance: '102',
+        disasterHelpline: '108',
+        ndma: '1078'
+      },
+      instructions: [
+        'Stay calm and follow evacuation orders',
+        'Take only essential items (ID, medicines, water)',
+        'Avoid low-lying areas and riverbanks',
+        'Do not walk through flood water',
+        'Switch off gas and electricity if safe',
+        'Keep your phone on for emergency alerts',
+        'Head to nearest designated shelter immediately'
+      ],
+      downloadTime: new Date().toISOString(),
+      version: '1.0'
+    }
+  });
+});
